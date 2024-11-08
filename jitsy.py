@@ -5,9 +5,26 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
+from dotenv import load_dotenv
+from pathlib import Path
+import time, os
 
 def join_jitsi_meeting():
+    # Pull env variables
+    dotenv_path = Path('Settings/jitsy.env')
+    load_dotenv(dotenv_path=dotenv_path)
+    display_name = os.getenv('DISPLAY_NAME')
+    user_name = os.getenv('USER_NAME')
+    user_password = os.getenv('USER_PASSWORD')
+    meeting_base = os.getenv('JITSI_URL')
+    meeting_id = os.getenv('MEETING_ID')
+
+    if meeting_base and meeting_id:
+        meeting_url = f"{meeting_base}/{meeting_id}"
+        print(meeting_url)
+    else:
+        print("Error loading env variables for meeting.")
+
     # Set up Chrome options
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
@@ -18,15 +35,15 @@ def join_jitsi_meeting():
     # Initialize the browser
     browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     browser.set_window_size(1280, 800)
-    browser.get("https://meet.noahfrawley.ca/test-games-night")
-    print("Opened meeting URL")
+    browser.get(meeting_url)
+    print(f"Opened meeting URL: {meeting_url}")
 
     # Wait for the display name input field to be available and enter the display name
     try:
         display_name_input = WebDriverWait(browser, 10).until(
             EC.presence_of_element_located((By.ID, "premeeting-name-input"))
         )
-        display_name_input.send_keys("Test User")
+        display_name_input.send_keys(display_name)
         print("Entered display name")
     except Exception as e:
         print(f"Error entering display name: {e}")
@@ -46,11 +63,11 @@ def join_jitsi_meeting():
         username_input = WebDriverWait(browser, 10).until(
             EC.presence_of_element_located((By.ID, "login-dialog-username"))
         )
-        username_input.send_keys("noah")
-        print("Entered username")
+        username_input.send_keys(user_name)
+        print(f"Entered username: {user_name}")
 
         password_input = browser.find_element(By.NAME, "password")
-        password_input.send_keys("REDACTED")
+        password_input.send_keys(user_password)
         print("Entered password")
 
         login_button = browser.find_element(By.CSS_SELECTOR, '[aria-label="Login"]')
