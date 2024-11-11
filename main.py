@@ -49,7 +49,7 @@ class App(customtkinter.CTk):
     
     def init_options(self):
         customtkinter.set_appearance_mode(self.default_appearance)
-        if utilities.env.load(self.global_env, 'MEETING_SOFTWARE') and not utilities.files.check_exist(self.jitsi_env):
+        if utilities.env.load(self.global_env, 'MEETING_SOFTWARE') == 'JITSI' and not utilities.files.check_exist(self.jitsi_env):
             utilities.env.write(self.jitsi_env, 'JITSI_SETUP_REQUIRED', 'Yes')
             utilities.env.write(self.jitsi_env, 'JITSI_URL', 'NONE')
             utilities.env.write(self.jitsi_env, 'MEETING_ID', 'NONE')
