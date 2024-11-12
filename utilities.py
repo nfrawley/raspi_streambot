@@ -111,14 +111,33 @@ class logs:
         # If the logging env file does not exist, create it. Default to level INFO.
         log_settings = str(Path('Settings/logging.env'))
         x = files.check_exist(log_settings)
-        if x['success'] and not x['result']:
-            try:
-                files.create(log_settings)
-                env.write(log_settings, 'LOGGING_LEVEL', 'INFO')
-                env.write(log_settings, 'LOGGING_DIR', 'Logs/')
-            except Exception as e:
-                print(f"Failed step logging.env creation: {e}")
-        
+        if x['success'] and x['result']:
+            print(f"File exists: {log_settings}")
+        # If file is not found, create it
+        elif x['success'] and not x['result']:
+            y = files.create(log_settings)
+            # Check if creation was successful
+            match y['success']:
+                # If file was created, add default settings
+                case True: 
+                    print(f"File created: {log_settings}")
+                    settings = {
+                        'LOGGING_LEVEL': 'INFO',
+                        'LOGGING_DIR': 'Logs/',
+                    }
+                    for key, value in settings.items():
+                        z = env.write(log_settings, key, value)
+                        if z['success']:
+                            print(f"Set {key} = {value} in {log_settings}")
+                        else:
+                            print(f"Couldn't write {key} = {value} in {log_settings}")
+                            print(f"{z['result']}")
+                case False: 
+                    print(f"Error creating file: {y['result']}")
+        # If there was an exception, print it (since logs not active yet)
+        else:
+            print(x['result'])
+
         # Load logging settings
         load_level = env.load(log_settings, 'LOGGING_LEVEL')
         level = load_level['result']
@@ -129,11 +148,21 @@ class logs:
         
         # If file doesn't exist yet, do it.
         x = files.check_exist(log_path)
-        if x['success'] and not x['result']:
-            try:
-                files.create(log_path)
-            except Exception as e:
-                print(f"Failed step create log file: {e}")
+        if x['success'] and x['result']:
+            print(f"File exists: {log_path}")
+        # If file is not found, create it
+        elif x['success'] and not x['result']:
+            y = files.create(log_path)
+            # Check if creation was successful
+            match y['success']:
+                # If file was created, add default settings
+                case True: 
+                    print(f"Created {log_path}")
+                case False: 
+                    print(f"Error creating file: {y['result']}")
+        # If there was an exception, print it (since logs not active yet)
+        else:
+            print(x['result'])
 
         logging.basicConfig(filename=log_path, format="%(message)s")
         # Convert string to actual logging level
