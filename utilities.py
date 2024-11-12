@@ -126,6 +126,15 @@ class logs:
         self.app = app_name
         today = datetime.datetime.now().strftime("%b-%d-%Y")
         log_path = f"Logs/{today}.log"
+        
+        # If file doesn't exist yet, do it.
+        x = files.check_exist(log_path)
+        if x['success'] and not x['result']:
+            try:
+                files.create(log_path)
+            except Exception as e:
+                print(f"Failed step create log file: {e}")
+
         logging.basicConfig(filename=log_path, format="%(message)s")
         # Convert string to actual logging level
         self.level = level.upper() if level else 'INFO'
