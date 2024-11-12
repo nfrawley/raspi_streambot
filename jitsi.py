@@ -37,7 +37,7 @@ def run(playwright: Playwright) -> None:
 
     # Initialize the browser. The --use-fake-ui-for-media-stream prevents the popup for permissions to access camera and video.
     # You can disable headless mode for debugging (Or if you want the meeting window to be visible)
-    browser = playwright.chromium.launch(headless=False, args=["--use-fake-ui-for-media-stream"])
+    browser = playwright.chromium.launch(headless=True, args=["--use-fake-ui-for-media-stream"])
     context = browser.new_context()
     page = context.new_page()
 
