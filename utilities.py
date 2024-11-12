@@ -1,5 +1,4 @@
-import logging
-import os, dotenv
+import os, dotenv, logging, datetime
 from pathlib import Path
 
 class env:
@@ -101,19 +100,33 @@ class files:
             return {'success': False, 'result': str(e)}
 
 class logs:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, app_name: str, *args, **kwargs):
+        """
+        Start a logger for the app you're calling from.
+
+        Args:
+            app_name: Used to identify app (or section of app) adding to logfile.
+        """
         super().__init__(*args, **kwargs)
         # If the logging env file does not exist, create it. Default to level INFO.
         log_settings = str(Path('Settings/logging.env'))
-        if not files.check_exist(log_settings):
-            files.create(log_settings)
-            env.write(log_settings, 'LOGGING_LEVEL', 'INFO')
+        x = files.check_exist(log_settings)
+        if x['success'] and not x['result']:
+            try:
+                files.create(log_settings)
+                env.write(log_settings, 'LOGGING_LEVEL', 'INFO')
+                env.write(log_settings, 'LOGGING_DIR', 'Logs/')
+            except Exception as e:
+                print(f"Failed step logging.env creation: {e}")
         
         # Load logging settings
         load_level = env.load(log_settings, 'LOGGING_LEVEL')
         level = load_level['result']
-        self.app_logger = logging.getLogger(__name__)
-        
+        self.app_logger = logging.getLogger()
+        self.app = app_name
+        today = datetime.datetime.now().strftime("%b-%d-%Y")
+        log_path = f"Logs/{today}.log"
+        logging.basicConfig(filename=log_path, format="%(message)s")
         # Convert string to actual logging level
         self.level = level.upper() if level else 'INFO'
         self.app_logger.setLevel(getattr(logging, self.level))
@@ -121,22 +134,52 @@ class logs:
 
     # Set the logging level if it needs to be updated
     def set_level(self, level: str):
+        """
+        Sets the logging level.
+
+        Args:
+            level: Accepts (INFO/DEBUG/ERROR/CRITICAL).
+        """
         self.new_level = level.upper()
         self.app_logger.setLevel(getattr(logging, self.new_level))
         print(f"Logging level updated to {self.new_level}")
 
     # Print to log file INFO message
     def info(self, message: str) -> None:
-        self.app_logger.info(f"{__name__} - INFO: {message}")
+        """
+        Enter to the logfile an INFO entry. Format: DateTime - Appname - INFO: Message.
+
+        Args:
+            message: What to send to the log.
+        """
+        self.app_logger.info(f"{self.app} - INFO: {message}")
     
     # Print to log file DEBUG message
     def debug(self, message: str) -> None:
-        self.app_logger.debug(f"{__name__} - DEBUG: {message}")
+        """
+        Enter to the logfile a DEBUG entry. Format: DateTime - Appname - DEBUG: Message.
+
+        Args:
+            message: What to send to the log.
+        """
+        self.app_logger.debug(f"{self.app} - DEBUG: {message}")
 
     # Print to log file CRTICAL message
     def critical(self, message: str) -> None:
-        self.app_logger.critical(f"{__name__} - CRITICAL: {message}")
+        """
+        Enter to the logfile a CRITICAL entry. Format: DateTime - Appname - CRITICAL: Message.
+
+        Args:
+            message: What to send to the log.
+        """
+        self.app_logger.critical(f"{self.app} - CRITICAL: {message}")
 
     # Print to log file ERROR message
     def error(self, message: str) -> None:
-        self.app_logger.error(f"{__name__} - ERROR: {message}")
+        """
+        Enter to the logfile an ERROR entry. Format: DateTime - Appname - ERROR: Message.
+
+        Args:
+            message: What to send to the log.
+        """
+        self.app_logger.error(f"{self.app} - ERROR: {message}")
