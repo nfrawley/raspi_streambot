@@ -1,4 +1,4 @@
-import os, dotenv, logging, datetime
+import os, dotenv, logging, datetime, platform, subprocess, socket
 from pathlib import Path
 
 class env:
@@ -221,3 +221,65 @@ class logs:
             message: What to send to the log.
         """
         self.app_logger.error(f"{self.app} - ERROR: {message}")
+
+class Network:
+    @staticmethod
+    def check_connection() -> dict:
+        """
+        Check if device is connected to internet.
+
+        Args:
+            None
+
+        Returns:
+            dict: Dictionary with keys 'success', 'result' and 'type' where 'success' is False if an exception occurs. 'result' contains True if device is connected to internet, False if it is not, or a string of the exception that occurred. 'Type' contains the network connection media type (if applicable).
+        """
+        try:
+        # Connect to cloudflare to check connectivity
+            socket.create_connection(("1.1.1.1", 53), timeout=3)
+            connected = True
+        except OSError:
+            return {'success': True, 'result': False, 'type': ""}
+        except Exception as e:
+            return {'success': False, 'result': str(e), 'type': ""}
+        
+        if platform.system() == 'Windows':
+            try:
+                output = subprocess.check_output("netsh interface show interface", shell=True, text=True)
+                for line in output.splitlines():
+                    if "Connected" in line:
+                        if "Wi-Fi" in line:
+                            return {'success': True, 'result': True, 'type': "Wi-Fi"}
+                        elif "Ethernet" in line:
+                            return {'success': True, 'result': True, 'type': "Ethernet"}
+                        else:
+                            # How did you get here???
+                            return {'success': False, 'result': "Something is horribly wrong.. How are you connected to internet without Wi-Fi or Ethernet?"}
+            except subprocess.SubprocessError as e:
+                return {'success': False, 'result': str(e), 'type': ""}
+
+        elif platform.system() == "Linux":
+            try:
+            # Check interfaces on Linux
+                output = subprocess.check_output("nmcli -t -f TYPE,STATE d", shell=True, text=True)
+                for line in output.splitlines():
+                    if "connected" in line:
+                        if "wifi" in line:
+                            return {'success': True, 'result': True, 'type': "Wi-Fi"}
+                        elif "ethernet" in line:
+                            return {'success': True, 'result': True, 'type': "Ethernet"}
+            except subprocess.SubprocessError as e:
+                return {'success': False, 'result': str(e), 'type': ""}
+            
+        elif platform.system() == "Darwin":  # macOS
+            try:
+            # Use 'networksetup' on macOS
+                output = subprocess.check_output(["networksetup", "-listallhardwareports"], text=True)
+                if "Wi-Fi" in output:
+                    wifi_status = subprocess.check_output(["networksetup", "-getairportnetwork", "en0"], text=True)
+                    if "You are connected to" in wifi_status:
+                        return {'success': True, 'result': True, 'type': "Wi-Fi"}
+                return {'success': True, 'result': True, 'type': "Ethernet"}
+            except subprocess.SubprocessError as e:
+                return {'success': False, 'result': str(e), 'type': ""}
+        return {'success': False, 'result': "Unsupported system?"}
