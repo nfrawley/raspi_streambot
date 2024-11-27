@@ -1,4 +1,4 @@
-import os, dotenv, logging, datetime, platform, subprocess, socket
+import os, dotenv, logging, datetime, platform, subprocess, socket, winwifi
 from pathlib import Path
 
 class env:
@@ -237,7 +237,6 @@ class Network:
         try:
         # Connect to cloudflare to check connectivity
             socket.create_connection(("1.1.1.1", 53), timeout=3)
-            connected = True
         except OSError:
             return {'success': True, 'result': False, 'type': ""}
         except Exception as e:
@@ -260,7 +259,7 @@ class Network:
 
         elif platform.system() == "Linux":
             try:
-            # Check interfaces on Linux
+            # Check interfaces on Linux (tested on raspian)
                 output = subprocess.check_output("nmcli -t -f TYPE,STATE d", shell=True, text=True)
                 for line in output.splitlines():
                     if "connected" in line:
@@ -271,15 +270,44 @@ class Network:
             except subprocess.SubprocessError as e:
                 return {'success': False, 'result': str(e), 'type': ""}
             
-        elif platform.system() == "Darwin":  # macOS
+        elif platform.system() == "Darwin":
+            return {'success': True, 'result': True, 'type': "MacOS: operation not supported"}
+
+        return {'success': False, 'result': "Unknown system type"}
+    
+    @staticmethod
+    def search_wifi() -> dict:
+        """
+        Check available wifi networks.
+
+        Args:
+            None
+
+        Returns:
+            dict: Dictionary with keys 'success', 'result' where 'success' is False if an exception occurs. 'result' will be an list of available Wi-Fi networks.
+        """
+        wifi_list = []
+        if platform.system() == 'Windows':
             try:
-            # Use 'networksetup' on macOS
-                output = subprocess.check_output(["networksetup", "-listallhardwareports"], text=True)
-                if "Wi-Fi" in output:
-                    wifi_status = subprocess.check_output(["networksetup", "-getairportnetwork", "en0"], text=True)
-                    if "You are connected to" in wifi_status:
-                        return {'success': True, 'result': True, 'type': "Wi-Fi"}
-                return {'success': True, 'result': True, 'type': "Ethernet"}
-            except subprocess.SubprocessError as e:
-                return {'success': False, 'result': str(e), 'type': ""}
-        return {'success': False, 'result': "Unsupported system?"}
+                output = winwifi.WinWiFi.scan()
+                for item in output:
+                    wifi_list.append(item.ssid)
+                cleaned_list = list(set(filter(bool, wifi_list)))
+            except Exception as e:
+                return {'success': False, 'result': str(e)}
+            return {'success': True, 'result': cleaned_list}
+
+        elif platform.system() == "Linux":
+            try:
+                output = subprocess.check_output("nmcli -t -f SSID dev wifi list", shell=True, text=True)
+                for line in output.splitlines():
+                    wifi_list.append(str(line))
+                # This will remove duplicate SSID's (In case of 2.4 and 5GHz, and any empty values in list)
+                cleaned_list = list(set(filter(bool, wifi_list)))
+            except Exception as e:
+                return {'success': False, 'result': str(e)}
+            return {'success': True, 'result': cleaned_list}
+            
+        elif platform.system() == "Darwin":
+            return {'success': True, 'result': True, 'type': "MacOS: operation not supported"}
+        return {'success': False, 'result': "Unknown system type"}
